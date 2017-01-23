@@ -19,13 +19,33 @@
 #   down, two off-ramp
 # Assume on-ramp and off-ramp are independent
 # If there is a intersection
+import random
+
+
+vehicle_data = {
+    # 'Type': (length, acceleration, deceleration, probability)
+    'car': (4, 3, 4, 0.9),
+    'truck': (8, 1, 3.5, 0.1),
+    # 'bus': (12, 1, 2, )
+}
+
+speed_data = [
+    ((15,20), 1),
+    ((20,25), 2),
+    ((25,30), 2),
+    ((30,35), 3),
+    ((35,40), 5),
+    ((40,45), 9),
+    ((45,50), 18),
+    ((50,55), 27),
+    ((55,60), 21),
+    ((60,65), 10),
+    ((65,70), 2),
+]
+
 
 # Emit vechiles with poisson distribution
 def poisson_distribution(flow):
-    pass
-
-# Emit vechiles with weighted uniform
-def weighted_distribution(flow):
     pass
 
 def lane_changing_model():
@@ -117,15 +137,26 @@ class Section(object):
 
 class Vehicle(object):
     def __init__(self):
-        self.speed = desired_speed()
-        self.acc_rate = 2 # m/s
-        self.size = 2
+        self.speed = self.desired_speed()
+        self.type = self.get_type()
+        self.length, self.acc_rate, self.dec_rate, _ = vehicle_data[self.type]
+        self.front_location = 0
+        self.back_location = self.front_location - self.length
 
     def desired_speed(self):
-        return 60
+        population = [val for val, cnt in speed_data for i in range(cnt)]
+        min_speed, max_speed = random.choice(population)
+        return round(random.uniform(min_speed, max_speed)*1.609, 2)
+
+    # generate random vehicle type
+    def get_type(self):
+        weighted_choices = [(v_type, int(v_data[3]*10)) for v_type, v_data in vehicle_data.items()]
+        population = [val for val, cnt in weighted_choices for i in range(cnt)]
+        return random.choice(population)
 
 class AutoVehicle(Vehicle):
     def __init__(self):
+        Vehicle.__init__(self)
         self.time_gap
 
 # Define a basic simulator to derive specific simulator
@@ -134,12 +165,12 @@ class BasicSimulator(object):
         time_slot = 0.1 # second
         self.list = section_list
 
-    def run(self):
+    def ticktock(self):
         pass
 
 class SingleLaneSimulator(BasicSimulator):
     def __init__(self, section_list):
-        super.__init__(self, section_list)
+        BasicSimulator.__init__(self, section_list)
 
-    def run(self):
+    def ticktock(self):
         pass
