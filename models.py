@@ -20,7 +20,8 @@
 # Assume on-ramp and off-ramp are independent
 # If there is a intersection
 import random
-
+from scipy import stats
+import numpy as np
 
 vehicle_data = {
     # 'Type': (length, acceleration, deceleration, probability)
@@ -46,7 +47,10 @@ speed_data = [
 
 # Emit vechiles with poisson distribution
 def poisson_distribution(flow):
-    pass
+    return stats.poisson.rvs(mu=flow,loc=0,size=1)[0]
+
+def weighted_distribution(flow):
+    return flow
 
 def lane_changing_model():
     pass
@@ -63,9 +67,11 @@ class Section(object):
         self.delta_demand = 0
         self.on_ramp_num = 0
         self.off_ramp_num = 0
+        self.main_cap = 50
         self.ramp_cap = 50              # default ramp limit for IS
         self.mainstream_model = poisson_distribution
         self.ramp_model = weighted_distribution
+        self.time_array = []
 
     def set_delta_demand(self, delta):
         self.delta_demand = int(delta)
@@ -135,11 +141,15 @@ class Section(object):
             print('Bottleneck Section, decrease to', self.next_sec_lanes, 'lanes.')
         print('-----------------------------')
 
+    def record_time(self, data):
+        self.time_array.append(data)
+
 class Vehicle(object):
     def __init__(self):
         self.speed = self.desired_speed()
         self.type = self.get_type()
         self.length, self.acc_rate, self.dec_rate, _ = vehicle_data[self.type]
+        self.time_gap = 1.4
         self.front_location = 0
         self.back_location = self.front_location - self.length
 
@@ -157,20 +167,50 @@ class Vehicle(object):
 class AutoVehicle(Vehicle):
     def __init__(self):
         Vehicle.__init__(self)
-        self.time_gap
+        self.time_gap = 0.5
 
 # Define a basic simulator to derive specific simulator
 class BasicSimulator(object):
-    def __init__(self, section_list):
-        time_slot = 0.1 # second
-        self.list = section_list
+    def __init__(self):
+        self.time_slot = 0.1 # second
+        self.curr_time = 0
 
     def ticktock(self):
         pass
 
 class SingleLaneSimulator(BasicSimulator):
-    def __init__(self, section_list):
-        BasicSimulator.__init__(self, section_list)
+    def __init__(self):
+        BasicSimulator.__init__(self)
+        self.time_limits = int(24*60*60/self.time_slot)
+        self.mainstream_pending_vehicles = []
+        self.ramp_waiting_vehicles = []
+        self.mainstream_vehicles = []
+
+    def mainstream_simulation(self):
+        pass
+
+    def ramp_simulation(self):
+        pass
 
     def ticktock(self):
+        self.mainstream_simulation()
+        self.ramp_simulation()
+
+    def log(self):
         pass
+
+    def congestion_detection(self):
+        if self.ramp_waiting_vehicles.__len__() > self.curr_sec.main_cap or self.mainstream_pending_vehicles.__len__() > self.curr_sec.ramp_cap:
+            return True
+        return False
+
+    def run(self, section_list):
+        self.list = section_list
+        for sec in self.list:
+            self.curr_sec = sec
+            for i in range(self.time_limits):
+                self.ticktock()
+                self.log()
+                if self.congestion_detection():
+                    self.curr_sec.record_time(self.curr_time)
+                    break
